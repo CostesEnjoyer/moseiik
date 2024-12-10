@@ -333,22 +333,20 @@ fn prepare_target(
     tile_size: &Size,
 ) -> Result<RgbImage, Box<dyn Error>> {
     let target = ImageReader::open(image_path)?.decode()?.into_rgb8();
-    let width = target.width();
-    let height = target.height();
-    let target = target
-        .view(
-            0,
-            0,
-            width - width % tile_size.width,
-            height - height % tile_size.height,
-        )
-        .to_image();
-    Ok(resize(
+    let target = resize(
         &target,
         target.width() * scale,
         target.height() * scale,
         Nearest,
-    ))
+    );
+    Ok(target
+        .view(
+            0,
+            0,
+            target.width() - target.width() % tile_size.width,
+            target.height() - target.height() % tile_size.height,
+        )
+        .to_image())
 }
 
 pub fn compute_mosaic(args: Options) {
@@ -442,22 +440,61 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use image::ImageError;
+
     #[test]
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    fn unit_test_x86() {
-        // TODO
-        assert!(true);
+    fn unit_test_x86() -> Result<(), ImageError> {
+        let img_path = "/home/eii/QLOG/moseiik/assets/kit.jpeg";
+        let img = ImageReader::open(img_path)?.decode()?.into_rgb8();
+        assert_eq!(unsafe{l1_x86_sse2(&img, &img)}, 0);
+        Ok(())
     }
 
     #[test]
     #[cfg(target_arch = "aarch64")]
-    fn unit_test_aarch64() {
-        assert!(true);
+    fn unit_test_aarch64() -> Result<(), ImageError> {
+        let img_path = "/home/eii/QLOG/moseiik/assets/kit.jpeg";
+        let img = ImageReader::open(img_path)?.decode()?.into_rgb8();
+        assert_eq!(l1_neon(&img, &img), 0);
+        Ok(())
     }
 
     #[test]
-    fn unit_test_generic() {
-        // TODO
-        assert!(true);
+    fn unit_test_generic() -> Result<(), ImageError> {
+        let img_path = "/home/eii/QLOG/moseiik/assets/kit.jpeg";
+        let img = ImageReader::open(img_path)?.decode()?.into_rgb8();
+        assert_eq!(l1_generic(&img, &img), 0);
+        Ok(())
+    }
+
+    #[test]
+    fn unit_test_target() -> Result<(), Box<dyn Error>> {
+        let img_path = "/home/eii/QLOG/moseiik/assets/kit.jpeg";
+        let scale = 2;
+        let tile_size = Size {
+            width: 25,
+            height: 25,
+        };
+        let result_img = prepare_target(&img_path, scale, &tile_size)?;
+        let condition = (result_img.width() == 3825) && (result_img.height() == 2150);
+        assert!(condition, "width = {}, height = {}", result_img.width(), result_img.height());
+        Ok(())
+    }
+
+    #[test]
+    fn unit_test_tiles() -> Result<(), Box<dyn Error>> {
+        let images_folder = "/home/eii/QLOG/moseiik/assets/tiles-small";
+        let tile_size = Size {
+            width: 25,
+            height: 25,
+        };
+        let verbose = false;
+        let result_vec = prepare_tiles(&images_folder, &tile_size, verbose)?;
+        let result_img = &result_vec[0];
+        let condition = (result_img.width() == 25) && (result_img.height() == 25);
+        assert!(condition, "width = {}, height = {}", result_img.width(), result_img.height());
+        Ok(())
     }
 }
