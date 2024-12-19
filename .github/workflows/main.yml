@@ -29,7 +29,7 @@ jobs:
           platforms: all
 
       - name: Build
-        run: docker buildx build --platform ${{ matrix.platform }} -t moseiik-test:latest -f docker/Dockerfile --load .
+        run: docker buildx build --platform ${{ matrix.platform }} -t moseiik-test:latest -f Dockerfile --load .
 
       - name: Test
         run: docker run --platform ${{ matrix.platform }} moseiik-test:latest 
