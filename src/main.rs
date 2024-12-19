@@ -457,7 +457,7 @@ mod tests {
     fn unit_test_aarch64() -> Result<(), ImageError> {
         let img_path = "/home/eii/QLOG/moseiik/assets/kit.jpeg";
         let img = ImageReader::open(img_path)?.decode()?.into_rgb8();
-        assert_eq!(l1_neon(&img, &img), 0);
+        assert_eq!(unsafe{l1_neon(&img, &img)}, 0);
         Ok(())
     }
 
